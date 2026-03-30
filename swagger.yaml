@@ -1,0 +1,235 @@
+openapi: 3.0.0
+info:
+  title: Mini Event Management API
+  version: 1.0.0
+  description: API for managing events, bookings, and attendance
+
+servers:
+  - url: http://localhost:5000/api
+
+paths:
+
+  /events:
+    get:
+      summary: Get all upcoming events
+      description: Returns events where event_date is in the future
+      responses:
+        200:
+          description: List of events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Event'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+    post:
+      summary: Create a new event
+      description: Creates an event with given details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEvent'
+      responses:
+        201:
+          description: Event created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: Event created
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /bookings:
+    post:
+      summary: Book tickets for an event
+      description: Books tickets if available and returns a booking code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        201:
+          description: Booking successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  bookingCode:
+                    type: string
+              example:
+                message: Booking successful
+                bookingCode: EVT-ISKXNC9G
+        400:
+          $ref: '#/components/responses/BadRequest'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /users/{id}/bookings:
+    get:
+      summary: Get bookings of a user
+      description: Returns all bookings made by a specific user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserBooking'
+        500:
+          $ref: '#/components/responses/ServerError'
+
+  /events/{eventId}/attendance:
+    post:
+      summary: Mark attendance
+      description: Validates booking code and marks attendance
+      parameters:
+        - in: path
+          name: eventId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookingCode
+              properties:
+                bookingCode:
+                  type: string
+      responses:
+        200:
+          description: Attendance marked successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  ticketsBooked:
+                    type: integer
+              example:
+                message: Attendance marked
+                ticketsBooked: 2
+        400:
+          $ref: '#/components/responses/BadRequest'
+        404:
+          description: Invalid booking code
+          content:
+            application/json:
+              example:
+                message: Invalid booking code
+        500:
+          $ref: '#/components/responses/ServerError'
+
+components:
+
+  schemas:
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        event_date:
+          type: string
+        total_capacity:
+          type: integer
+        remaining_tickets:
+          type: integer
+
+    CreateEvent:
+      type: object
+      required:
+        - title
+        - date
+        - capacity
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        date:
+          type: string
+        capacity:
+          type: integer
+          minimum: 1
+
+    BookingRequest:
+      type: object
+      required:
+        - userId
+        - eventId
+        - tickets
+      properties:
+        userId:
+          type: integer
+        eventId:
+          type: integer
+        tickets:
+          type: integer
+          minimum: 1
+
+    UserBooking:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_id:
+          type: integer
+        booking_code:
+          type: string
+        tickets_booked:
+          type: integer
+        event_date:
+          type: string
+        title:
+          type: string
+
+  responses:
+
+    BadRequest:
+      description: Invalid input or missing fields
+      content:
+        application/json:
+          example:
+            message: Missing required fields
+
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          example:
+            message: Internal Server Error
